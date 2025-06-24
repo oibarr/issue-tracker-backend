@@ -2,40 +2,25 @@ const express = require("express");
 const router = express.Router({ mergeParams: true });
 const db = require("../db");
 const authenticateToken = require("../middleware/auth");
+const verifyProjectOwnership = require("../middleware/projects");
 
 router.use(authenticateToken);
 
-router.get("/", (req, res) => {
+router.get("/", verifyProjectOwnership, (req, res) => {
   const projectId = req.params.projectId;
 
-  const sql = "SELECT * FROM projects WHERE id = ? AND user_id = ?";
-
-  db.get(sql, [projectId, req.user.sub], (err, project) => {
+  const sql = "SELECT * FROM issues WHERE project_id = ?";
+  db.all(sql, [projectId], (err, rows) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
     }
 
-    if (!project) {
-      console.warn(
-        `Access denied: user ${req.user.sub} tried to access project ${projectId}`
-      );
-      return res.status(404).json({ error: "Project not found" });
-    }
-
-    const sqlIssues = "SELECT * FROM issues WHERE project_id = ?";
-    db.all(sqlIssues, [projectId], (err, rows) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Internal server error" });
-      }
-
-      res.json(rows);
-    });
+    res.json(rows);
   });
 });
 
-router.post("/", (req, res) => {
+router.post("/", verifyProjectOwnership, (req, res) => {
   const projectId = req.params.projectId;
   const { title } = req.body;
 
@@ -43,29 +28,14 @@ router.post("/", (req, res) => {
     return res.status(400).json({ error: "Project ID and title are required" });
   }
 
-  const sql = "SELECT * FROM projects WHERE id = ? AND user_id = ?";
-  db.get(sql, [projectId, req.user.sub], (err, project) => {
+  const sql = "INSERT INTO issues (title, project_id) VALUES (?, ?)";
+  db.run(sql, [title, projectId], function (err) {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
     }
 
-    if (!project) {
-      console.warn(
-        `Access denied: user ${req.user.sub} tried to access project ${projectId}`
-      );
-      return res.status(404).json({ error: "Project not found" });
-    }
-
-    const insertSql = "INSERT INTO issues (title, project_id) VALUES (?, ?)";
-    db.run(insertSql, [title, projectId], function (err) {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Internal server error" });
-      }
-
-      res.status(201).json({ id: this.lastID, title, status: "open" });
-    });
+    res.status(201).json({ id: this.lastID, title, status: "open" });
   });
 });
 

@@ -9,8 +9,8 @@ const issueRoutes = require("./routes/issues");
 app.use(express.json());
 
 app.use("/auth", authRoutes);
-app.use("/projects", projectRoutes);
 app.use("/projects/:projectId/issues", issueRoutes);
+app.use("/projects", projectRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
