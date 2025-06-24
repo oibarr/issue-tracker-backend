@@ -124,3 +124,45 @@ Notes
     If project is not owned → returns 404.
 
     JWT token required for all project and issue routes.
+
+## Design
+
+Why this schema?
+
+The schema follows a simple relational structure:
+
+    users → can create many projects
+
+    projects → can have many issues
+
+Each project belongs to a single user (ownership enforced).
+
+Each issue belongs to a project.
+
+Provides clear ownership boundaries: a user can only see their own projects and issues.
+
+# How authentication works
+
+The app uses JWT for authentication:
+
+    Passwords are hashed with bcrypt
+
+    On login, a signed JWT token is returned
+
+    Routes are protected using middleware (Express) or guards (NestJS)
+
+    The token includes the user ID (sub)
+
+    Ownership is enforced by validating that the user owns the project being accessed
+
+# How I would expand the system
+
+Add issue assignees — issues could have a foreign key to a user (or multiple users)
+
+Add teams — projects could be owned by a team instead of an individual
+
+Add issue status transitions and history/audit log
+
+Add timestamps — created_at / updated_at
+
+Add PATCH / DELETE endpoints for projects and issues
